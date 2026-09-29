@@ -1,22 +1,371 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="dark">
 <head>
-    <title>TagShot</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TagShot - VR Multiplayer</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#08090d',
+                            card: 'rgba(15, 18, 28, 0.55)',
+                            cyan: '#00f0ff',
+                            magenta: '#ff007f',
+                            purple: '#7000ff'
+                        }
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        rajdhani: ['Rajdhani', 'sans-serif'],
+                    },
+                    animation: {
+                        'glow-pulse': 'glowPulse 3s ease-in-out infinite',
+                        'float-soft': 'floatSoft 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        glowPulse: {
+                            '0%, 100%': { opacity: '0.9', filter: 'drop-shadow(0 0 15px rgba(0,240,255,0.4))' },
+                            '50%': { opacity: '0.6', filter: 'drop-shadow(0 0 5px rgba(0,240,255,0.15))' },
+                        },
+                        floatSoft: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-6px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            background-color: #08090d;
+            color: #e5e7eb;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Subtle Background Grid */
+        .cyber-grid {
+            background-size: 60px 60px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+        }
+
+        /* Ambient Glow Backdrop Blur */
+        .ambient-glow {
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.12) 0%, rgba(255, 0, 127, 0.08) 50%, rgba(0, 0, 0, 0) 70%);
+            filter: blur(60px);
+            pointer-events: none;
+        }
+
+        /* Glassmorphism Card */
+        .glass-panel {
+            background: rgba(15, 20, 32, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(0, 240, 255, 0.35);
+            box-shadow: 0 15px 35px -5px rgba(0, 240, 255, 0.15);
+        }
+
+        /* Smooth Neon Buttons */
+        .btn-cyan {
+            background: rgba(0, 240, 255, 0.08);
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            color: #00f0ff;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-cyan:hover {
+            background: #00f0ff;
+            color: #08090d;
+            border-color: #00f0ff;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .title-link {
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .title-link:hover {
+            transform: scale(1.02);
+            filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.4));
+        }
+    </style>
 </head>
+<body class="min-h-screen flex flex-col justify-between cyber-grid relative selection:bg-cyan-500 selection:text-black">
 
-<body>
-    <h1>TagShot</h1>
+    <!-- Ambient Glowing Orbs -->
+    <div class="ambient-glow top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+    <div class="ambient-glow top-3/4 left-1/3 -translate-y-1/2"></div>
 
-    <h2>VR Multiplayer</h2>
+    <!-- Particle Mesh Canvas Overlay -->
+    <canvas id="mesh-canvas" class="fixed inset-0 pointer-events-none z-0 opacity-60"></canvas>
 
-    <p>
-        Tag. Run. Survive.
-    </p>
+    <header class="relative z-20 w-full px-6 py-8 flex justify-between items-center max-w-6xl mx-auto">
+        <!-- Logo Header Link -->
+        <a href="https://www.meta.com/en-gb/experiences/tagshot/1398930896630824/?require_login=true" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 group">
+            <div class="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.2)] group-hover:border-cyan-400 group-hover:bg-cyan-500/20 transition-all">
+                <i class="fa-solid fa-vr-cardboard text-cyan-400 text-base"></i>
+            </div>
+            <span class="font-orbitron text-xl font-extrabold tracking-widest text-white">TAG<span class="text-cyan-400">SHOT</span></span>
+        </a>
 
-    <p>
-        TagShot is a fast-paced VR multiplayer game
-        where players chase, escape, and survive.
-    </p>
+        <!-- Audio Switch -->
+        <button id="audio-toggle" class="px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-700/60 text-slate-300 hover:text-cyan-400 hover:border-cyan-400/50 transition-all text-xs font-orbitron tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-volume-high text-cyan-400" id="audio-icon"></i>
+            <span id="audio-status" class="text-[11px]">SOUND ON</span>
+        </button>
+    </header>
 
+    <main class="relative z-10 flex-grow flex flex-col justify-center items-center px-6 py-12 text-center max-w-4xl mx-auto">
+        
+        <!-- Subtle VR Tag -->
+        <div class="mb-6 inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-cyan-950/30 border border-cyan-500/30 shadow-[0_0_20px_rgba(0,240,255,0.15)] animate-float-soft">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span class="font-orbitron text-xs font-semibold tracking-widest uppercase text-cyan-300">
+                VR Multiplayer
+            </span>
+        </div>
+
+        <!-- Clickable Main Title -->
+        <a href="https://www.meta.com/en-gb/experiences/tagshot/1398930896630824/?require_login=true" target="_blank" rel="noopener noreferrer" class="title-link inline-block mb-3">
+            <h1 class="font-orbitron text-6xl sm:text-7xl md:text-8xl font-black uppercase tracking-tight text-white cursor-pointer">
+                TAG<span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-magenta-400">SHOT</span>
+            </h1>
+        </a>
+
+        <!-- Smooth Tagline -->
+        <h2 class="font-orbitron text-xl sm:text-3xl font-bold tracking-widest uppercase mb-6 text-slate-300">
+            Tag. Run. Survive.
+        </h2>
+
+        <!-- Description -->
+        <p class="max-w-xl text-lg sm:text-xl text-slate-400 font-medium mb-10 leading-relaxed font-rajdhani">
+            <span class="text-slate-200 font-bold">TagShot</span> is a fast-paced VR multiplayer game where players chase, escape, and survive.
+        </p>
+
+        <!-- Primary CTA Action Button -->
+        <div class="flex flex-col sm:flex-row gap-4 w-full max-w-sm justify-center mb-16">
+            <a href="https://www.meta.com/en-gb/experiences/tagshot/1398930896630824/?require_login=true" target="_blank" rel="noopener noreferrer" class="sound-btn btn-cyan font-orbitron font-bold text-base py-4 px-8 rounded-xl uppercase tracking-wider flex items-center justify-center gap-3 w-full shadow-lg">
+                <i class="fa-brands fa-meta text-lg"></i>
+                Get TagShot
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full text-left">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center mb-4 text-cyan-400 text-lg">
+                    <i class="fa-solid fa-wind"></i>
+                </div>
+                <h3 class="font-orbitron font-bold text-lg text-white mb-1.5">Fluid Motion</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Momentum-based physical VR locomotion built for effortless precision running.</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-10 h-10 rounded-xl bg-magenta-500/10 border border-magenta-400/30 flex items-center justify-center mb-4 text-magenta-400 text-lg">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h3 class="font-orbitron font-bold text-lg text-white mb-1.5">Social Play</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Seamless spatial 3D audio keeps you connected as you evade or pursue in real-time.</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-400/30 flex items-center justify-center mb-4 text-purple-400 text-lg">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 class="font-orbitron font-bold text-lg text-white mb-1.5">Dynamic Arenas</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Outsmart opponents across vertically designed sci-fi environments made for survival.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="relative z-10 w-full py-6 text-center text-slate-500 text-xs font-orbitron tracking-widest border-t border-slate-800/40 bg-slate-950/40 backdrop-blur-md">
+        <p>&copy; 2026 TAGSHOT VR. ALL RIGHTS RESERVED.</p>
+    </footer>
+
+    <script>
+        // --- Warm Synth Sound Engine (Web Audio API) ---
+        let audioEnabled = true;
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // Soft Warm Hover Chime Tone
+        function playWarmHoverSound() {
+            if (!audioEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine'; // Soft sine wave
+                osc.frequency.setValueAtTime(440, ctx.currentTime); // A4
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.18); // Harmonic glide
+
+                gain.gain.setValueAtTime(0.001, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.035, ctx.currentTime + 0.03); // Very soft peak
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.18);
+            } catch(e) {}
+        }
+
+        // Soft Tap Click Tone
+        function playSoftTapSound() {
+            if (!audioEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.08);
+            } catch(e) {}
+        }
+
+        // Audio Toggle Setup
+        const audioBtn = document.getElementById('audio-toggle');
+        const audioIcon = document.getElementById('audio-icon');
+        const audioStatus = document.getElementById('audio-status');
+
+        audioBtn.addEventListener('click', () => {
+            audioEnabled = !audioEnabled;
+            if (audioEnabled) {
+                audioIcon.className = "fa-solid fa-volume-high text-cyan-400";
+                audioStatus.innerText = "SOUND ON";
+                playWarmHoverSound();
+            } else {
+                audioIcon.className = "fa-solid fa-volume-xmark text-slate-500";
+                audioStatus.innerText = "MUTED";
+            }
+        });
+
+        // Attach Smooth Sounds to Interactive Elements
+        document.querySelectorAll('button, a, .glass-panel').forEach(elem => {
+            elem.addEventListener('mouseenter', () => playWarmHoverSound());
+            elem.addEventListener('click', () => playSoftTapSound());
+        });
+
+        // --- Minimalist Constellation Mesh Canvas ---
+        const canvas = document.getElementById('mesh-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const nodes = Array.from({ length: 35 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.4,
+            vy: (Math.random() - 0.5) * 0.4,
+            radius: Math.random() * 1.5 + 1
+        }));
+
+        let mouse = { x: -1000, y: -1000 };
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        function animateMesh() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < nodes.length; i++) {
+                const n = nodes[i];
+                n.x += n.vx;
+                n.y += n.vy;
+
+                if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+                if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+
+                // Subtle Mouse Interaction
+                const dxMouse = mouse.x - n.x;
+                const dyMouse = mouse.y - n.y;
+                const distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
+                if (distMouse < 180) {
+                    n.x -= (dxMouse / distMouse) * 0.4;
+                    n.y -= (dyMouse / distMouse) * 0.4;
+                }
+
+                // Draw Nodes
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
+                ctx.fill();
+
+                // Connect Nearby Nodes
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const n2 = nodes[j];
+                    const dx = n.x - n2.x;
+                    const dy = n.y - n2.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 160) {
+                        ctx.beginPath();
+                        ctx.moveTo(n.x, n.y);
+                        ctx.lineTo(n2.x, n2.y);
+                        ctx.strokeStyle = `rgba(0, 240, 255, ${0.12 - dist / 160 * 0.12})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateMesh);
+        }
+        animateMesh();
+    </script>
 </body>
 </html>
